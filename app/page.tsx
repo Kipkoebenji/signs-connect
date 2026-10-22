@@ -4,7 +4,7 @@
 import React, { useRef, useState, useEffect } from "react";
 import * as tf from "@tensorflow/tfjs";
 import Webcam from "react-webcam";
-import "./App.css";
+import "./globals.css";
 import { nextFrame } from "@tensorflow/tfjs";
 // 2. TODO - Import drawing utility here
 // e.g. import { drawRect } from "./utilities";
@@ -89,7 +89,7 @@ function App() {
             left: 0,
             right: 0,
             textAlign: "center",
-            zindex: 9,
+            zIndex: 8,
             width: 640,
             height: 480,
           }}
@@ -104,7 +104,7 @@ function App() {
             left: 0,
             right: 0,
             textAlign: "center",
-            zindex: 8,
+            zIndex: 9,
             width: 640,
             height: 480,
           }}
