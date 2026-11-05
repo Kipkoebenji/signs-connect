@@ -16,6 +16,16 @@ bun dev
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
+## Adding translation inference
+
+The camera and MediaPipe lifecycle is isolated in `hooks/useCamera.ts`. It currently draws pose, face, and hand landmarks on the preview but does not make predictions. To connect a TensorFlow.js model later:
+
+1. Add a model adapter, for example `lib/sign-model.ts`, that loads the trained model and converts the landmark arrays from the MediaPipe `Results` callback into the model's input tensor shape.
+2. Add an `onLandmarks` callback option to `useCamera` and call it with each `Results` object after `drawLandmarks` runs. Keep model loading and prediction outside the camera hook.
+3. Pass the adapter callback from `Translator` and update `translatedText` only with real model output. Add throttling or a confidence threshold in the adapter rather than simulating recognition in the UI.
+
+For text to sign, replace `AvatarPlaceholder` with an avatar component and call its future translation adapter from `TranslationInput`'s `onTranslate` callback. No model or avatar animation is loaded by the current interface.
+
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
