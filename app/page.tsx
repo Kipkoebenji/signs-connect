@@ -1,116 +1,172 @@
 "use client";
 
-// Import dependencies
-import React, { useRef, useState, useEffect } from "react";
-import * as tf from "@tensorflow/tfjs";
+import type { Holistic, Results } from "@mediapipe/holistic";
+import { useEffect, useRef, useState } from "react";
 import Webcam from "react-webcam";
 import "./globals.css";
-import { nextFrame } from "@tensorflow/tfjs";
-// 2. TODO - Import drawing utility here
-// e.g. import { drawRect } from "./utilities";
-import {drawRect} from "./utilities"; 
+
+declare global {
+  interface Window {
+    Holistic: typeof Holistic;
+  }
+}
+
+type Landmark = {
+  x: number;
+  y: number;
+  z?: number;
+  visibility?: number;
+};
+
+const landmarkGroups: Array<{
+  key: keyof Results;
+  color: string;
+}> = [
+  { key: "poseLandmarks", color: "#22d3ee" },
+  { key: "faceLandmarks", color: "#f472b6" },
+  { key: "leftHandLandmarks", color: "#a3e635" },
+  { key: "rightHandLandmarks", color: "#facc15" },
+];
+
+function drawLandmarks(
+  canvas: HTMLCanvasElement,
+  results: Results,
+  width: number,
+  height: number,
+) {
+  const context = canvas.getContext("2d");
+  if (!context) return;
+
+  context.clearRect(0, 0, width, height);
+
+  for (const group of landmarkGroups) {
+    const landmarks = results[group.key] as Landmark[] | undefined;
+    if (!landmarks) continue;
+
+    context.fillStyle = group.color;
+    for (const landmark of landmarks) {
+      if (landmark.visibility !== undefined && landmark.visibility < 0.5) {
+        continue;
+      }
+
+      context.beginPath();
+      context.arc(
+        (1 - landmark.x) * width,
+        landmark.y * height,
+        3,
+        0,
+        Math.PI * 2,
+      );
+      context.fill();
+    }
+  }
+}
 
 function App() {
-  const webcamRef = useRef(null);
-  const canvasRef = useRef(null);
+  const webcamRef = useRef<Webcam>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [status, setStatus] = useState("Starting camera...");
 
-  // Main function
-  const runCoco = async () => {
-    // 3. TODO - Load network 
-    
-    const net = await tf.loadGraphModel('/model/model.json');
-    
-    //  Loop and detect hands
-    setInterval(() => {
-      detect(net);
-    }, 16.7);
-  };
+  useEffect(() => {
+    let active = true;
+    let animationFrame = 0;
+    let processing = false;
+    let holistic: Holistic | null = null;
 
-  const detect = async (net) => {
-    // Check data is available
-    if (
-      typeof webcamRef.current !== "undefined" &&
-      webcamRef.current !== null &&
-      webcamRef.current.video.readyState === 4
-    ) {
-      // Get Video Properties
-      const video = webcamRef.current.video;
-      const videoWidth = webcamRef.current.video.videoWidth;
-      const videoHeight = webcamRef.current.video.videoHeight;
+    const setup = async () => {
+      try {
+        if (!window.Holistic) {
+          await new Promise<void>((resolve, reject) => {
+            const script = document.createElement("script");
+            script.src =
+              "https://cdn.jsdelivr.net/npm/@mediapipe/holistic/holistic.js";
+            script.onload = () => resolve();
+            script.onerror = () => reject(new Error("Holistic script failed to load"));
+            document.head.appendChild(script);
+          });
+        }
+        if (!active) return;
 
-      // Set video width
-      webcamRef.current.video.width = videoWidth;
-      webcamRef.current.video.height = videoHeight;
+        holistic = new window.Holistic({
+          locateFile: (file) =>
+            `https://cdn.jsdelivr.net/npm/@mediapipe/holistic/${file}`,
+        });
+        holistic.setOptions({
+          modelComplexity: 1,
+          smoothLandmarks: true,
+          refineFaceLandmarks: true,
+          minDetectionConfidence: 0.5,
+          minTrackingConfidence: 0.5,
+        });
+        holistic.onResults((results) => {
+          if (!active) return;
+          const video = webcamRef.current?.video;
+          const canvas = canvasRef.current;
+          if (!video || !canvas || video.videoWidth === 0) return;
 
-      // Set canvas height and width
-      canvasRef.current.width = videoWidth;
-      canvasRef.current.height = videoHeight;
+          canvas.width = video.videoWidth;
+          canvas.height = video.videoHeight;
+          drawLandmarks(canvas, results, video.videoWidth, video.videoHeight);
+          setStatus("Tracking landmarks");
+        });
 
-      // 4. TODO - Make Detections
-      const img = tf.browser.fromPixels(video)
-      const resized = tf.image.resizeBilinear(img, [640,480])
-      const casted = resized.cast('int32')
-      const expanded = casted.expandDims(0)
-      const obj = await net.executeAsync(expanded)
-      console.log(obj)
+        const processFrame = async () => {
+          if (!active || !holistic) return;
+          const video = webcamRef.current?.video;
+          if (
+            video?.readyState === HTMLMediaElement.HAVE_ENOUGH_DATA &&
+            !processing
+          ) {
+            processing = true;
+            try {
+              await holistic.send({ image: video });
+            } catch {
+              if (active) setStatus("Unable to process camera frames");
+            } finally {
+              processing = false;
+            }
+          }
+          animationFrame = requestAnimationFrame(processFrame);
+        };
 
-      const boxes = await obj[1].array()
-      const classes = await obj[2].array()
-      const scores = await obj[4].array()
-      
-      // Draw mesh
-      const ctx = canvasRef.current.getContext("2d");
+        animationFrame = requestAnimationFrame(processFrame);
+      } catch {
+        if (active) setStatus("Unable to load MediaPipe Holistic");
+      }
+    };
+    void setup();
 
-      // 5. TODO - Update drawing utility
-      // drawSomething(obj, ctx)  
-      requestAnimationFrame(()=>{drawRect(boxes[0], classes[0], scores[0], 0.8, videoWidth, videoHeight, ctx)}); 
-
-      tf.dispose(img)
-      tf.dispose(resized)
-      tf.dispose(casted)
-      tf.dispose(expanded)
-      tf.dispose(obj)
-
-    }
-  };
-
-  useEffect(()=>{runCoco()},[]);
+    return () => {
+      active = false;
+      cancelAnimationFrame(animationFrame);
+      holistic?.close();
+    };
+  }, []);
 
   return (
-    <div className="App">
+    <main className="App">
       <header className="App-header">
+        <p className="tracking-status">{status}</p>
         <Webcam
           ref={webcamRef}
-          muted={true} 
+          audio={false}
+          mirrored
           style={{
-            position: "absolute",
-            marginLeft: "auto",
-            marginRight: "auto",
-            left: 0,
-            right: 0,
-            textAlign: "center",
-            zIndex: 8,
-            width: 640,
-            height: 480,
+            width: "min(92vw, 960px)",
+            height: "auto",
           }}
+          onUserMediaError={() => setStatus("Camera access is required")}
         />
-
         <canvas
           ref={canvasRef}
           style={{
             position: "absolute",
-            marginLeft: "auto",
-            marginRight: "auto",
-            left: 0,
-            right: 0,
-            textAlign: "center",
-            zIndex: 9,
-            width: 640,
-            height: 480,
+            width: "min(92vw, 960px)",
+            height: "auto",
           }}
         />
       </header>
-    </div>
+    </main>
   );
 }
 
