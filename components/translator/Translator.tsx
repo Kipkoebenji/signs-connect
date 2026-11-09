@@ -4,7 +4,9 @@ import { useState } from "react";
 import { useCamera } from "@/hooks/useCamera";
 import type { TranslationMode } from "@/types/translator";
 import { Canvas } from "@react-three/fiber";
+import { Environment, OrbitControls } from "@react-three/drei";
 import { Avatar } from "./Avatar";
+import { AnimatedAvatar } from "./AnimatedAvatar";
 import { CameraPreview } from "./CameraPreview";
 import { TranslationInput } from "./TranslationInput";
 import { TranslationModeToggle } from "./TranslationModeToggle";
@@ -42,12 +44,12 @@ export function Translator() {
         </>
       ) : (
         <>
-          <div className="h-125 w-full">
-            <Canvas camera={{ position: [0, 0, 3] }}>
+          <div className="h-75 w-full">
+            <Canvas camera={{ position: [0, 1.5, 3] }}>
               <ambientLight intensity={1} />
-              <directionalLight position={[2, 2, 2]} />
+              <directionalLight position={[2, 3, 2]} />
 
-              <Avatar />
+              <AnimatedAvatar />
             </Canvas>
           </div>
           <TranslationInput

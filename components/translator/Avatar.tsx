@@ -3,7 +3,7 @@
 import { useGLTF } from "@react-three/drei";
 
 export function Avatar() {
-  const { scene } = useGLTF("/avatars/avatar.glb");
+  const { scene } = useGLTF("/avatars/my-avatar.glb");
 
   return <primitive object={scene} />;
 }
