@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { useCamera } from "@/hooks/useCamera";
 import type { TranslationMode } from "@/types/translator";
-import { AvatarPlaceholder } from "./AvatarPlaceholder";
+import { Canvas } from "@react-three/fiber";
+import { Avatar } from "./Avatar";
 import { CameraPreview } from "./CameraPreview";
 import { TranslationInput } from "./TranslationInput";
 import { TranslationModeToggle } from "./TranslationModeToggle";
@@ -22,17 +23,6 @@ export function Translator() {
 
   return (
     <main className="translator-shell">
-      {/* <header className="app-header">
-        <div className="brand-mark" aria-hidden="true">
-          SC
-        </div>
-        <p className="brand-name">Signs Connect</p>
-        <h1>Kenyan Sign Language Translation</h1>
-        <p className="intro">
-          A clear bridge between signing and everyday communication.
-        </p>
-      </header> */}
-
       <TranslationModeToggle mode={mode} onChange={changeMode} />
 
       {mode === "SIGN_TO_TEXT" ? (
@@ -52,7 +42,14 @@ export function Translator() {
         </>
       ) : (
         <>
-          <AvatarPlaceholder />
+          <div className="h-125 w-full">
+            <Canvas camera={{ position: [0, 0, 3] }}>
+              <ambientLight intensity={1} />
+              <directionalLight position={[2, 2, 2]} />
+
+              <Avatar />
+            </Canvas>
+          </div>
           <TranslationInput
             value={inputText}
             onChange={setInputText}
