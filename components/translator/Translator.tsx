@@ -49,7 +49,7 @@ export function Translator() {
               <ambientLight intensity={1} />
               <directionalLight position={[2, 3, 2]} />
 
-              <AnimatedAvatar />
+              <AnimatedAvatar text={inputText} />
             </Canvas>
           </div>
           <TranslationInput

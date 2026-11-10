@@ -35,14 +35,7 @@ export function TranslationInput({
         >
           Clear
         </button>
-        <button
-          className="primary-button"
-          type="button"
-          onClick={onTranslate}
-          disabled={!value.trim()}
-        >
-          Translate
-        </button>
+        
       </div>
     </section>
   );
