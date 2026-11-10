@@ -10,7 +10,7 @@ import * as SkeletonUtils from "three/addons/utils/SkeletonUtils.js";
 import { bvhToAvatarClip } from "@/lib/retargetBvh";
 
 const AVATAR_URL = "/avatars/my-avatar.glb";
-const IDLE_URL = "/animations/idle.bvh";
+const IDLE_URL = "/animations/i-want-to-buy-milk.bvh";
 
 export function AnimatedAvatar() {
   const gltf = useGLTF(AVATAR_URL);
